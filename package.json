@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@alch/alchemy-sdk": "^1.1.1",
     "ether": "^0.0.9",
     "ethers": "^5.7.2",
     "next": "15.4.4",
