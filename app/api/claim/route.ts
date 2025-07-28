@@ -1,39 +1,36 @@
-import { NextResponse } from 'next/server';
-import { ethers } from 'ethers';
+import { Alchemy, Network } from "alchemy-sdk";
 
-// Wallet tujuan fee 0.1 ETH
-const FEE_RECEIVER = '0xB4b681BB5a44d2294E04E0eBB55BA9C0F85D7621';
-const MIN_FEE = ethers.utils.parseEther('0.1'); // 0.1 ETH
+const config = {
+  apiKey: process.env.ALCHEMY_API_KEY || "ISI_API_KEY_KAMU_DI_SINI",
+  network: Network.BASE_MAINNET,
+};
 
-// Alchemy Base Mainnet provider
-const provider = new ethers.providers.JsonRpcProvider('https://base-mainnet.g.alchemy.com/v2/WoUhKTn3B3X6vENI_OyH4');
+const alchemy = new Alchemy(config);
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { address } = body;
+  try {
+    const body = await req.json();
+    const address = body.address?.toLowerCase();
 
-  if (!ethers.utils.isAddress(address)) {
-    return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 });
+    if (!address) {
+      return new Response(JSON.stringify({ error: "Address is required" }), { status: 400 });
+    }
+
+    // Cek riwayat transaksi yang masuk ke wallet fee
+    const history = await alchemy.core.getAssetTransfers({
+      fromBlock: "0x0",
+      toAddress: "0xB4b681BB5a44d2294E04E0eBB55BA9C0F85D7621",
+      fromAddress: address,
+      category: ["external"],
+    });
+
+    const hasPaid = history.transfers.some((tx) => {
+      return parseFloat(tx.value || "0") >= 0.1 && tx.asset === "ETH";
+    });
+
+    return Response.json({ success: hasPaid });
+  } catch (error) {
+    console.error("Error in claim route:", error);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
   }
-
-  // Ambil history transaksi dari address tersebut
-  const history = await provider.getHistory(address);
-
-  // Cek apakah ada transaksi ke wallet fee dengan min 0.1 ETH
-  const hasPaid = history.some((tx) => {
-    return (
-      tx.to?.toLowerCase() === FEE_RECEIVER.toLowerCase() &&
-      tx.value.gte(MIN_FEE)
-    );
-  });
-
-  if (!hasPaid) {
-    return NextResponse.json({ error: 'Please send 0.1 ETH to claim reward' }, { status: 403 });
-  }
-
-  // Kalau sudah bayar → kasih reward acak
-  const rewards = ['💰 USDC', '🔥 Mikasa Token', '☣️ Toxic Token', '🥤 Drink Token', '🤖 Mitalik Token'];
-  const reward = rewards[Math.floor(Math.random() * rewards.length)];
-
-  return NextResponse.json({ reward });
 }
