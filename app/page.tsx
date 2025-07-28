@@ -35,7 +35,7 @@ export default function HomePage() {
       {/* Logo Zora */}
       <div className="mb-6">
         <Image
-          src="/zora-logo.png" // pastikan kamu simpan logo ini di `public/zora-logo.png`
+          src="/zora.png" // pastikan kamu simpan logo ini di `public/zora-logo.png`
           alt="Zora Logo"
           width={80}
           height={80}
