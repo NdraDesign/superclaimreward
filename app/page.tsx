@@ -34,7 +34,12 @@ export default function Home() {
 
       {!isClaimed && (
         <button
-          onClick={handleClaim}
+          onClick={const handleClaim = async () => {
+  const res = await fetch('/api/claim', { method: 'POST' });
+  const data = await res.json();
+  setReward(data.reward);
+  setIsClaimed(true);
+};}
           className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-2xl text-xl font-semibold shadow-lg transition transform hover:scale-105"
         >
           🚀 Claim Now
