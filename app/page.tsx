@@ -1,75 +1,82 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState } from "react";
+import { claimReward } from "@/lib/claim";
+import { useAccount } from "wagmi";
+import Image from "next/image";
 
-export default function Home() {
-  const [address, setAddress] = useState('');
-  const [reward, setReward] = useState<string | null>(null);
-  const [isClaimed, setIsClaimed] = useState(false);
+export default function HomePage() {
+  const { address, isConnected } = useAccount();
+  const [status, setStatus] = useState("");
+  const [reward, setReward] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleClaim = async () => {
-    if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
-      alert('Please enter a valid wallet address.');
+    if (!isConnected || !address) {
+      setStatus("Wallet not connected.");
       return;
     }
 
-    const res = await fetch('/api/claim', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address }),
-    });
+    setLoading(true);
+    setStatus("⏳ Memeriksa fee & memproses klaim...");
+    const result = await claimReward(address);
+    setLoading(false);
 
-    const data = await res.json();
-    setReward(data.reward);
-    setIsClaimed(true);
+    if (result.success) {
+      setReward(result);
+      setStatus(`🎉 Kamu dapat ${result.reward} (${result.amount})`);
+    } else {
+      setStatus(result.message || "❌ Gagal klaim.");
+    }
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white flex flex-col items-center justify-center px-6 py-12 space-y-8">
-      <div className="flex flex-col items-center space-y-3 text-center">
-        <h1 className="text-5xl font-extrabold animate-fade-in">🎁 Claim Your Mystery Crypto Box</h1>
-        <div className="flex items-center space-x-2 text-gray-300 text-sm">
-          <img src="/zora.png" alt="Zora logo" className="w-5 h-5 rounded-sm" />
-          <span className="opacity-80">Part of Zora Event</span>
-        </div>
+    <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-black to-gray-900 text-white">
+      {/* Logo Zora */}
+      <div className="mb-6">
+        <Image
+          src="/zora-logo.png" // pastikan kamu simpan logo ini di `public/zora-logo.png`
+          alt="Zora Logo"
+          width={80}
+          height={80}
+          className="opacity-80"
+        />
       </div>
 
-      <p className="text-lg text-gray-300 max-w-xl text-center">
-        Enter your Base wallet address to claim your reward.
-      </p>
+      {/* Judul */}
+      <h1 className="text-3xl font-bold mb-4 animate-pulse">🎁 Claim Your Reward Box</h1>
 
-      {/* Address Input */}
-      <input
-        type="text"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
-        placeholder="0x..."
-        className="w-full max-w-md px-4 py-3 rounded-lg bg-gray-800 text-white border border-gray-600 placeholder-gray-500"
-      />
-
-      {!isClaimed && (
-        <button
-          onClick={handleClaim}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-2xl text-xl font-semibold shadow-lg transition transform hover:scale-105"
-        >
-          🚀 Claim Now
-        </button>
-      )}
-
-      {reward && (
-        <div className="text-3xl font-bold text-green-400 animate-bounce">
-          🎉 You received: {reward}
-        </div>
-      )}
-
-      <Link
-        href="https://warpcast.com/~/compose?text=Claim%20your%20box%20and%20get%20special%20token%20or%20USDC"
-        target="_blank"
-        className="mt-6 inline-block bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl text-lg shadow-md transition"
+      {/* Tombol Klaim */}
+      <button
+        onClick={handleClaim}
+        disabled={loading}
+        className={`px-6 py-3 rounded-lg text-lg font-medium transition ${
+          loading
+            ? "bg-gray-600 cursor-not-allowed"
+            : "bg-purple-600 hover:bg-purple-700"
+        }`}
       >
-        🔗 Share on Warpcast
-      </Link>
+        {loading ? "Processing..." : "Claim Reward"}
+      </button>
+
+      {/* Status & Loading */}
+      {status && <p className="mt-4 text-sm text-center">{status}</p>}
+
+      {/* Spinner */}
+      {loading && (
+        <div className="mt-6 animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+      )}
+
+      {/* Link Transaksi */}
+      {reward?.txHash && (
+        <a
+          href={`https://basescan.org/tx/${reward.txHash}`}
+          target="_blank"
+          className="mt-4 text-blue-400 underline"
+        >
+          🔗 Lihat Transaksi di BaseScan
+        </a>
+      )}
     </main>
   );
-      }
+                }
